@@ -18,10 +18,10 @@ Parameters
 ----------
 
 - input\_image\_topic -- ROS topic of concantenated stereo images.
-- left\_output\_image\_topic -- defaults to /sxs\_stereo/left/image\_raw
-- right\_output\_image\_topic -- defaults to /sxs\_stereo/right/image\_raw
-- left\_camera\_info\_topic -- defaults to /sxs\_stereo/left/camera\_info
-- right\_camera\_info\_topic -- defaults to /sxs\_stereo/right/camera\_info
+- left\_output\_image\_topic -- defaults to /camera/left
+- right\_output\_image\_topic -- defaults to /camera/right
+- left\_camera\_info\_topic -- defaults to /camera/cinfoleft
+- right\_camera\_info\_topic -- defaults to /camera/cinforight
 - output\_width -- output images are rescaled to this width. If 0 or not set, it
   will be 1/2 of the input\_image\_topic width.
 - output\_height -- output images are rescaled to this height.  If 0 or not set, it
