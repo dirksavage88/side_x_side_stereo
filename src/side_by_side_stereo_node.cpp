@@ -64,26 +64,14 @@ class SplitImagePair : public rclcpp::Node
             this->declare_parameter("output_height", rclcpp::PARAMETER_INTEGER);
             this->declare_parameter("input_image_topic", rclcpp::PARAMETER_STRING);
             
-            // Foxy QoS
-            rclcpp::QoS video_qos(10);
-            video_qos.keep_last(10);
-            video_qos.best_effort();
-            video_qos.durability_volatile();
-            
 
-            this->create_subscription<sensor_msgs::msg::Image>("input_image_topic", video_qos, std::bind(&SplitImagePair::imageCallback, this, std::placeholders::_1));
             // Bind timer cb to object
-            timer_ptr_ = this->create_wall_timer(1000ms, std::bind(&SplitImagePair::timer_callback, this));
-
-        }
-
-        
-        void timer_callback()
-        {
+            // timer_ptr_ = this->create_wall_timer(1000ms, std::bind(&SplitImagePair::timer_callback, this));
 
             std::string inputImageTopic = this->get_parameter("input_image_topic").as_string();
-            RCLCPP_INFO(this->get_logger(), "input topic to stereo splitter=%s\n", inputImageTopic.c_str());
+
             
+            RCLCPP_INFO(this->get_logger(), "input topic to stereo splitter=%s\n", inputImageTopic.c_str());
             // Get params
             std::string left_output_image_topic = this->get_parameter("left_output_image_topic").as_string();
             std::string right_output_image_topic = this->get_parameter("right_output_image_topic").as_string();
@@ -91,6 +79,32 @@ class SplitImagePair : public rclcpp::Node
             std::string right_camera_info_topic = this->get_parameter("right_camera_info_topic").as_string();
             auto outputWidth = this->get_parameter("output_width").as_int();
             auto outputHeight = this->get_parameter("output_height").as_int();
+            
+            // Image publisher image transport instance TODO: move outside of function? 
+            rclcpp::NodeOptions options;
+            rclcpp::Node::SharedPtr imaget_ = rclcpp::Node::make_shared("image_publisher", options);
+            image_transport::ImageTransport it(imaget_);
+            pub_l_ = it.advertise("left/image_raw", 1);
+            pub_r_ = it.advertise("right/image_raw", 1);
+
+        }
+
+       void timer_callback()
+        {
+
+
+            // std::string inputImageTopic = this->get_parameter("input_image_topic").as_string();
+            // 
+            //
+            // RCLCPP_INFO(this->get_logger(), "input topic to stereo splitter=%s\n", inputImageTopic.c_str());
+            // 
+            // // Get params
+            // std::string left_output_image_topic = this->get_parameter("left_output_image_topic").as_string();
+            // std::string right_output_image_topic = this->get_parameter("right_output_image_topic").as_string();
+            // std::string left_camera_info_topic = this->get_parameter("left_camera_info_topic").as_string();
+            // std::string right_camera_info_topic = this->get_parameter("right_camera_info_topic").as_string();
+            // auto outputWidth = this->get_parameter("output_width").as_int();
+            // auto outputHeight = this->get_parameter("output_height").as_int();
 
         }
 
@@ -101,7 +115,7 @@ class SplitImagePair : public rclcpp::Node
             int outputWidth, outputHeight;
             sensor_msgs::msg::CameraInfo info_left, info_right;
             
-            RCLCPP_INFO(this->get_logger(), "Subscribing to input image topic");
+            // RCLCPP_INFO(this->get_logger(), "Subscribing to input image topic");
             
             // Get double camera image.
             cv_bridge::CvImagePtr cvImg = cv_bridge::toCvCopy(msg, msg->encoding);
@@ -110,19 +124,12 @@ class SplitImagePair : public rclcpp::Node
             // Created shared ptr to image 
             auto img = std::make_shared<sensor_msgs::msg::Image>(); 
             
-            // Image publisher image transport instance TODO: move outside of function? 
-            rclcpp::NodeOptions options;
-            rclcpp::Node::SharedPtr imaget_ = rclcpp::Node::make_shared("image_publisher", options);
-            image_transport::ImageTransport it(imaget_);
-            image_transport::Publisher pub_l_ = it.advertise("left/image_raw", 1);
-            image_transport::Publisher pub_r_ = it.advertise("right/image_raw", 1);
-        
             // If there are any subscribers to either output topic then publish images
             // on them.
             if (pub_l_.getNumSubscribers() > 0u ||
                 pub_r_.getNumSubscribers() > 0u)
             {
-                RCLCPP_INFO(this->get_logger(), "Start publishing images");
+                // RCLCPP_INFO(this->get_logger(), "splitting images");
                 // Define the relevant rectangles to crop.
                 cv::Rect leftROI, rightROI;
                 leftROI.y = rightROI.y = 0;
@@ -149,7 +156,7 @@ class SplitImagePair : public rclcpp::Node
                 // Load camera info
                 camera_info_manager::CameraInfoManager cimright(this);
                 camera_info_manager::CameraInfoManager cimleft(this);
-               
+
                 // // Get camera info
                 cimleft.getCameraInfo();
                 cimright.getCameraInfo(); 
@@ -162,6 +169,8 @@ class SplitImagePair : public rclcpp::Node
                 // CV image bridge
                 cv_bridge::CvImage cvImage;
                 
+                // RCLCPP_INFO(this->get_logger(), "Set up image pub topics");
+                
                 cvImage.encoding = msg->encoding;
                 cvImage.header.frame_id = msg->header.frame_id;
                 cvImage.header.stamp = msg->header.stamp;
@@ -169,6 +178,7 @@ class SplitImagePair : public rclcpp::Node
                     || pub_cam_info_l_->get_subscription_count() > 0u)
                 {
 
+                    // RCLCPP_INFO(this->get_logger(), "fill in image pub message");
                     cvImage.image = use_scaled ? leftScaled : leftImage;
                     //TODO:fix
                     img = cvImage.toImageMsg();
@@ -196,26 +206,39 @@ class SplitImagePair : public rclcpp::Node
             }
         }
 
+
         ~SplitImagePair(){}
     private:
         //Publisher shared ptrs (formerly node handles)
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_img_l_, pub_img_r_;
-
+        // rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
         // Set up image transports and camera info msg to fill with img data
-        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_ = create_publisher<sensor_msgs::msg::CameraInfo>("left/camera_info", 10);
-        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_ = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 10);
+        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_ = create_publisher<sensor_msgs::msg::CameraInfo>("left/camera_info", 1);
+        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_ = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 1);
         rclcpp::TimerBase::SharedPtr timer_ptr_;
+        image_transport::Publisher pub_l_;
+        image_transport::Publisher pub_r_;
 };
 
 int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
-    auto node_ = std::make_shared<SplitImagePair>();
-    // image_transport::ImageTransport isub(rawimage_);
-    // image_transport::Subscriber sub = isub.subscribe("image_raw", 100, sip::imageCallback);
+    // auto node_ = std::make_shared<SplitImagePair>();
+    SplitImagePair split_im;
+    SplitImagePair *splitim_ptr;
+    splitim_ptr = &split_im;
+    auto rawimage = std::make_shared<rclcpp::Node>("image_sub_cb");
+    image_transport::ImageTransport it(rawimage);
     // Create image pub advertise
     // rclcpp::spinscriber input image
-    rclcpp::spin(node_);
+    // Foxy QoS
+    // rclcpp::QoS video_qos(10);
+    // video_qos.keep_last(10);
+    // video_qos.best_effort();
+    // video_qos.durability_volatile();
+    // auto subscription_ = rawimage->create_subscription<sensor_msgs::msg::Image>("image_raw", video_qos, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
+    image_transport::Subscriber sub = it.subscribe("image_raw", 1, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
+    rclcpp::spin(rawimage);
 
     rclcpp::shutdown();
 }
