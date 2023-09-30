@@ -14,6 +14,10 @@ This is a modified version of public domain code posted by user PeteBlackerThe3r
 in response to my question on ROS Answers:
 https://answers.ros.org/question/315298/splitting-side-by-side-video-into-stereoleft-stereoright/
 
+Migrated to ROS 2 Galactic. 
+
+Please note colcon build may fail under Foxy. 
+
 Parameters
 ----------
 
@@ -26,18 +30,24 @@ Parameters
   will be 1/2 of the input\_image\_topic width.
 - output\_height -- output images are rescaled to this height.  If 0 or not set, it
   will be the same as the input\_image\_topic height.
+- left_cam_calibration_file -- URL to left camera calibration yaml file
+- right_cam_calibration_file -- URL to right camera calibration yaml file
 
 
 
 Disparity Map (disparity view:  ros2 run image_view disparity_view --ros-args --remap image:=/disparity)
 ![Kazam_screenshot_00018](https://github.com/dirksavage88/side_x_side_stereo/assets/35986980/0f810961-342a-4868-8815-b439af440d22)
 
-**Example command for stereo splitter:
-ros2 run side_x_side_stereo side_x_side_stereo_node --ros-args -p output_width:=640 -p output_height:=240 -p input_image_topic:=/image_mono -p left_output_image_topic:=/left/image_raw -p right_output_image_topic:=/right/image_raw -p left_camera_info_topic:=/left/camera_info -p right_camera_info_topic:=/right/camera_info**
+**Example command for stereo splitter:**
+----------
 
-**Example command to set up a disparity node:
-"ros2 run stereo_image_proc disparity_node --ros-remap --remap /left/image_rect:=/left/image_raw --remap /right/image_rect:=/right/image_raw"
-License**
+- ros2 run side_x_side_stereo side_x_side_stereo_node --ros-args -p output_width:=640 -p output_height:=240 -p input_image_topic:=/image_mono -p left_output_image_topic:=/left/image_raw -p right_output_image_topic:=/right/image_raw -p left_camera_info_topic:=/left/camera_info -p right_camera_info_topic:=/right/camera_info
+
+**Example command to set up a disparity node:**
+----------
+- ros2 run stereo_image_proc disparity_node --ros-remap --remap /left/image_rect:=/left/image_raw --remap /right/image_rect:=/right/image_raw
+
+License
 
 
 -------
