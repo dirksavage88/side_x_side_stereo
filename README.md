@@ -14,9 +14,7 @@ This is a modified version of public domain code posted by user PeteBlackerThe3r
 in response to my question on ROS Answers:
 https://answers.ros.org/question/315298/splitting-side-by-side-video-into-stereoleft-stereoright/
 
-Migrated to ROS 2 Galactic. 
-
-Please note colcon build may fail under Foxy. 
+Migrated to ROS 2.
 
 Parameters
 ----------
@@ -35,8 +33,10 @@ Parameters
 
 
 
-Disparity Map (disparity view:  ros2 run image_view disparity_view --ros-args --remap image:=/disparity)
+Disparity Map shown using standard ROS 2 image pipline->stereo_image_proc on intel i7 1165g7 ~15-20fps
 ![Kazam_screenshot_00018](https://github.com/dirksavage88/side_x_side_stereo/assets/35986980/0f810961-342a-4868-8815-b439af440d22)
+Disparity Map shown using isaac ros image pipeline->isaac_ros_stereo_image_proc pipeline ~30fps:
+![disparityjetsonnano](https://github.com/dirksavage88/side_x_side_stereo/assets/35986980/02ddedb6-e7d0-441e-9e65-0347a0402e22)
 
 **Example command for stereo splitter:**
 ----------
