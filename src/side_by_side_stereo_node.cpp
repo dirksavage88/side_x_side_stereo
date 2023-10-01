@@ -56,15 +56,17 @@ class SplitImagePair : public rclcpp::Node
         SplitImagePair(): Node("split_image_pair")
         {
             // Declare params and type
-            this->declare_parameter("left_output_image_topic", "");
-            this->declare_parameter("right_output_image_topic", "");
-            this->declare_parameter("left_camera_info_topic", "");
-            this->declare_parameter("right_camera_info_topic", "");
+            this->declare_parameter("left_output_image_topic", "/left/image_raw");
+            this->declare_parameter("right_output_image_topic", "/right/image_raw");
+            this->declare_parameter("left_camera_info_topic", "/left/camera_info");
+            this->declare_parameter("right_camera_info_topic", "/right/camera_info");
             this->declare_parameter("output_width", 0);
             this->declare_parameter("output_height", 0);
-            this->declare_parameter("input_image_topic", "");
+            this->declare_parameter("input_image_topic", "/image_raw");
             this->declare_parameter("left_cam_calibration_file", "");
             this->declare_parameter("right_cam_calibration_file", "");
+            this->declare_parameter("left_frame_id", "stereocamframe");
+            this->declare_parameter("right_frame_id", "stereocamframe");
             
             std::string inputImageTopic = this->get_parameter("input_image_topic").as_string();
             
@@ -74,10 +76,13 @@ class SplitImagePair : public rclcpp::Node
             std::string right_output_image_topic = this->get_parameter("right_output_image_topic").as_string();
             std::string left_camera_info_topic = this->get_parameter("left_camera_info_topic").as_string();
             std::string right_camera_info_topic = this->get_parameter("right_camera_info_topic").as_string();
+            left_cam_frame = this->get_parameter("left_frame_id").as_string();
+            right_cam_frame = this->get_parameter("right_frame_id").as_string();
             left_cam_calibration_file = this->get_parameter("left_cam_calibration_file").as_string();
             right_cam_calibration_file = this->get_parameter("right_cam_calibration_file").as_string();
             auto outputWidth = this->get_parameter("output_width").as_int();
             auto outputHeight = this->get_parameter("output_height").as_int();
+
             
             // Image publisher image transport instance 
             rclcpp::NodeOptions options;
@@ -159,14 +164,14 @@ class SplitImagePair : public rclcpp::Node
                 img = cvImage.toImageMsg();
                 pub_l_.publish(img);
                 info_left_.header.stamp = img->header.stamp;
-                info_left_.header.frame_id = img ->header.frame_id;
+                info_left_.header.frame_id = left_cam_frame;
                 pub_cam_info_l_->publish(info_left_);
 
                 cvImage.image = use_scaled ? rightScaled : rightImage;
                 img = cvImage.toImageMsg();
                 pub_r_.publish(img);
                 info_right_.header.stamp = img->header.stamp;
-                info_right_.header.frame_id = img->header.frame_id;
+                info_right_.header.frame_id = right_cam_frame;
                 pub_cam_info_r_->publish(info_right_);
 
             }
@@ -183,6 +188,8 @@ class SplitImagePair : public rclcpp::Node
         image_transport::Publisher pub_r_;
         std::string left_cam_calibration_file;
         std::string right_cam_calibration_file;
+        std::string left_cam_frame;
+        std::string right_cam_frame;
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_;//_ = create_publisher<sensor_msgs::msg::CameraInfo>("left/camera_info", 1);
         rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_;// = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 1);
         sensor_msgs::msg::CameraInfo info_right_;// = std::make_shared<sensor_msgs::msg::CameraInfo>();
