@@ -56,13 +56,13 @@ class SplitImagePair : public rclcpp::Node
         SplitImagePair(): Node("split_image_pair")
         {
             // Declare params and type
-            this->declare_parameter("left_output_image_topic", rclcpp::PARAMETER_STRING);
-            this->declare_parameter("right_output_image_topic", rclcpp::PARAMETER_STRING);
-            this->declare_parameter("left_camera_info_topic", rclcpp::PARAMETER_STRING);
-            this->declare_parameter("right_camera_info_topic", rclcpp::PARAMETER_STRING);
-            this->declare_parameter("output_width", rclcpp::PARAMETER_INTEGER);
-            this->declare_parameter("output_height", rclcpp::PARAMETER_INTEGER);
-            this->declare_parameter("input_image_topic", rclcpp::PARAMETER_STRING);
+            this->declare_parameter("left_output_image_topic", "");
+            this->declare_parameter("right_output_image_topic", "");
+            this->declare_parameter("left_camera_info_topic", "");
+            this->declare_parameter("right_camera_info_topic", "");
+            this->declare_parameter("output_width", 0);
+            this->declare_parameter("output_height", 0);
+            this->declare_parameter("input_image_topic", "");
             this->declare_parameter("left_cam_calibration_file", "");
             this->declare_parameter("right_cam_calibration_file", "");
             
