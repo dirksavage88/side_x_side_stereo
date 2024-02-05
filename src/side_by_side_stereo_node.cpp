@@ -62,16 +62,15 @@ class SplitImagePair : public rclcpp::Node
             this->declare_parameter("right_camera_info_topic", "/right/camera_info");
             this->declare_parameter("output_width", 0);
             this->declare_parameter("output_height", 0);
-            this->declare_parameter("input_image_topic", "/image_raw");
+
             this->declare_parameter("left_cam_calibration_file", "");
             this->declare_parameter("right_cam_calibration_file", "");
             this->declare_parameter("left_frame_id", "stereocamframe");
             this->declare_parameter("right_frame_id", "stereocamframe");
             
-            std::string inputImageTopic = this->get_parameter("input_image_topic").as_string();
+
             
-            RCLCPP_INFO(this->get_logger(), "input topic to stereo splitter=%s\n", inputImageTopic.c_str());
-            // Get params
+	    // Get params
             std::string left_output_image_topic = this->get_parameter("left_output_image_topic").as_string();
             std::string right_output_image_topic = this->get_parameter("right_output_image_topic").as_string();
             std::string left_camera_info_topic = this->get_parameter("left_camera_info_topic").as_string();
@@ -113,6 +112,8 @@ class SplitImagePair : public rclcpp::Node
         }
 
 
+
+
         // Image capture callback.
         void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg)
         {
@@ -125,8 +126,7 @@ class SplitImagePair : public rclcpp::Node
             cv_bridge::CvImageConstPtr cvImg; 
             
             // Get double camera image. 
-            cvImg = cv_bridge::toCvShare(msg, msg->encoding);
-            cv::Mat image = cvImg->image;
+            cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
             
             // If there are any subscribers to either output topic then publish images
             // on them.
@@ -137,14 +137,14 @@ class SplitImagePair : public rclcpp::Node
                 // Define the relevant rectangles to crop.
                 cv::Rect leftROI, rightROI;
                 leftROI.y = rightROI.y = 0;
-                leftROI.width = rightROI.width = image.cols / 2;
-                leftROI.height = rightROI.height = image.rows;
+                leftROI.width = rightROI.width = cvImg->image.cols / 2;
+                leftROI.height = rightROI.height = cvImg->image.rows;
                 leftROI.x = 0;
-                rightROI.x = image.cols / 2;
+                rightROI.x = cvImg->image.cols / 2;
 
-                // Crop images.
-                cv::Mat leftImage = cv::Mat(image, leftROI);
-                cv::Mat rightImage = cv::Mat(image, rightROI);
+                // Crop images. Make a copy for left and right.
+                cv::Mat leftImage = cv::Mat(cvImg->image, leftROI);
+                cv::Mat rightImage = cv::Mat(cvImg->image, rightROI);
                 // Apply scaling, if specified.
                 bool use_scaled = false;
                 cv::Mat leftScaled, rightScaled;
@@ -180,9 +180,6 @@ class SplitImagePair : public rclcpp::Node
         ~SplitImagePair(){}
     private:
         //Publisher shared ptrs (formerly node handles)
-        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_img_l_, pub_img_r_;
-        // rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_ = create_publisher<sensor_msgs::msg::CameraInfo>("left/camera_info", 1);
-        // rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_ = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 1);
         rclcpp::TimerBase::SharedPtr timer_ptr_;
         image_transport::Publisher pub_l_;
         image_transport::Publisher pub_r_;
@@ -204,9 +201,13 @@ int main(int argc, char** argv)
     SplitImagePair *splitim_ptr;
     splitim_ptr = &split_im;
 
+    split_im.declare_parameter("input_image_topic", "/image_mono");
+    std::string inputImageTopic = split_im.get_parameter("input_image_topic").as_string();
+    RCLCPP_INFO(split_im.get_logger(), "input topic to stereo splitter=%s\n", inputImageTopic.c_str());
+    
     auto rawimage = std::make_shared<rclcpp::Node>("image_sub_cb");
     image_transport::ImageTransport it(rawimage);
-    image_transport::Subscriber sub = it.subscribe("image_raw", 1, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
+    image_transport::Subscriber sub = it.subscribe(inputImageTopic.c_str(), 1, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
     
     rclcpp::spin(rawimage);
     rclcpp::shutdown();
