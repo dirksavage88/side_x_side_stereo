@@ -14,7 +14,7 @@ This is a modified version of public domain code posted by user PeteBlackerThe3r
 in response to my question on ROS Answers:
 https://answers.ros.org/question/315298/splitting-side-by-side-video-into-stereoleft-stereoright/
 
-Migrated to ROS 2.
+Migrated to ROS 2. Converts BGR8 to mono8
 
 Parameters
 ----------
@@ -24,10 +24,7 @@ Parameters
 - right\_output\_image\_topic -- defaults to /right/image_raw
 - left\_camera\_info\_topic -- defaults to /left/camera_info
 - right\_camera\_info\_topic -- defaults to /right/camera_info
-- output\_width -- output images are rescaled to this width. If 0 or not set, it
-  will be 1/2 of the input\_image\_topic width.
-- output\_height -- output images are rescaled to this height.  If 0 or not set, it
-  will be the same as the input\_image\_topic height.
+
 - left_cam_calibration_file -- URL to left camera calibration yaml file
 - right_cam_calibration_file -- URL to right camera calibration yaml file
 
