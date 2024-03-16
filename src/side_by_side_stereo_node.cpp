@@ -44,10 +44,6 @@
 #include <functional>
 #include <string>
 
-// If non-zero, outputWidth and outputHeight set the size of the output images.
-// If zero, the outputWidth is set to 1/2 the width of the input image, and
-// outputHeight is the same as the height of the input image.
-
 using namespace std::chrono_literals;
 
 class SplitImagePair : public rclcpp::Node
@@ -60,8 +56,6 @@ class SplitImagePair : public rclcpp::Node
             this->declare_parameter("right_output_image_topic", "/right/image_raw");
             this->declare_parameter("left_camera_info_topic", "/left/camera_info");
             this->declare_parameter("right_camera_info_topic", "/right/camera_info");
-            this->declare_parameter("output_width", 0);
-            this->declare_parameter("output_height", 0);
 
             this->declare_parameter("left_cam_calibration_file", "");
             this->declare_parameter("right_cam_calibration_file", "");
@@ -79,9 +73,6 @@ class SplitImagePair : public rclcpp::Node
             right_cam_frame = this->get_parameter("right_frame_id").as_string();
             left_cam_calibration_file = this->get_parameter("left_cam_calibration_file").as_string();
             right_cam_calibration_file = this->get_parameter("right_cam_calibration_file").as_string();
-            auto outputWidth = this->get_parameter("output_width").as_int();
-            auto outputHeight = this->get_parameter("output_height").as_int();
-
             
             // Image publisher image transport instance 
             rclcpp::NodeOptions options;
@@ -118,16 +109,13 @@ class SplitImagePair : public rclcpp::Node
         void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg)
         {
 
-            int outputWidth, outputHeight;
-
-            
             // Created shared ptr to image 
             auto img = std::make_shared<sensor_msgs::msg::Image>(); 
             cv_bridge::CvImageConstPtr cvImg; 
             
             // Get double camera image. 
             cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-            
+
             // If there are any subscribers to either output topic then publish images
             // on them.
             if (pub_l_.getNumSubscribers() > 0u ||
@@ -141,33 +129,29 @@ class SplitImagePair : public rclcpp::Node
                 leftROI.height = rightROI.height = cvImg->image.rows;
                 leftROI.x = 0;
                 rightROI.x = cvImg->image.cols / 2;
+                
+		// Convert to mono
+		cv::Mat mono_convert;
+		cv::cvtColor(cvImg->image, mono_convert, CV_BGR2GRAY);
 
-                // Crop images. Make a copy for left and right.
-                cv::Mat leftImage = cv::Mat(cvImg->image, leftROI);
-                cv::Mat rightImage = cv::Mat(cvImg->image, rightROI);
-                // Apply scaling, if specified.
-                bool use_scaled = false;
-                cv::Mat leftScaled, rightScaled;
-                if (use_scaled = (outputWidth > 0 && outputHeight > 0))
-                {
-                    cv::Size sz = cv::Size(outputWidth, outputHeight);
-                    cv::resize(leftImage, leftScaled, sz);
-                    cv::resize(rightImage, rightScaled, sz);
-                }
+		// Crop images. Make a copy for left and right.
+                cv::Mat leftImage = cv::Mat(mono_convert, leftROI);
+                cv::Mat rightImage = cv::Mat(mono_convert, rightROI);
+                
                 // CV image bridge
                 cv_bridge::CvImage cvImage;
-                
-                cvImage.encoding = msg->encoding;
+		
+                cvImage.encoding = "mono8";
                 cvImage.header.frame_id = msg->header.frame_id;
                 cvImage.header.stamp = msg->header.stamp;
-                cvImage.image = use_scaled ? leftScaled : leftImage;
+                cvImage.image = leftImage;
                 img = cvImage.toImageMsg();
                 pub_l_.publish(img);
                 info_left_.header.stamp = img->header.stamp;
                 info_left_.header.frame_id = left_cam_frame;
                 pub_cam_info_l_->publish(info_left_);
 
-                cvImage.image = use_scaled ? rightScaled : rightImage;
+                cvImage.image = rightImage;
                 img = cvImage.toImageMsg();
                 pub_r_.publish(img);
                 info_right_.header.stamp = img->header.stamp;
