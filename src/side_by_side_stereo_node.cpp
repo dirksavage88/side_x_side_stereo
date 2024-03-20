@@ -61,7 +61,7 @@ class SplitImagePair : public rclcpp::Node
             this->declare_parameter("right_cam_calibration_file", "");
             this->declare_parameter("left_frame_id", "stereocamframe");
             this->declare_parameter("right_frame_id", "stereocamframe");
-            
+            this->declare_parameter("image_encoding", "mono8");
 
             
 	    // Get params
@@ -73,8 +73,9 @@ class SplitImagePair : public rclcpp::Node
             right_cam_frame = this->get_parameter("right_frame_id").as_string();
             left_cam_calibration_file = this->get_parameter("left_cam_calibration_file").as_string();
             right_cam_calibration_file = this->get_parameter("right_cam_calibration_file").as_string();
+            std::string image_enc = this->get_parameter("image_encoding").as_string();
             
-            // Image publisher image transport instance 
+	    // Image publisher image transport instance 
             rclcpp::NodeOptions options;
             rclcpp::Node::SharedPtr imaget_ = rclcpp::Node::make_shared("image_publisher", options);
             image_transport::ImageTransport it(imaget_);
@@ -113,8 +114,17 @@ class SplitImagePair : public rclcpp::Node
             auto img = std::make_shared<sensor_msgs::msg::Image>(); 
             cv_bridge::CvImageConstPtr cvImg; 
             
-            // Get double camera image. 
-            cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+            // Get double camera image.
+	    if (image_enc == "mono8") {
+	    
+            	cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
+	    }
+
+	    else {
+	    
+            	cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+	    }
+
 
             // If there are any subscribers to either output topic then publish images
             // on them.
@@ -129,19 +139,27 @@ class SplitImagePair : public rclcpp::Node
                 leftROI.height = rightROI.height = cvImg->image.rows;
                 leftROI.x = 0;
                 rightROI.x = cvImg->image.cols / 2;
-                
-		// Convert to mono
-		cv::Mat mono_convert;
-		cv::cvtColor(cvImg->image, mono_convert, CV_BGR2GRAY);
+               
+	        if (image_enc == "bgr8") {	
+		    // Convert to mono
+		    cv::Mat mono_convert;
+		    cv::cvtColor(cvImg->image, mono_convert, CV_BGR2GRAY);
+		
+		    // Crop images. Make a copy for left and right.
+                    cv::Mat leftImage = cv::Mat(mono_convert, leftROI);
+                    cv::Mat rightImage = cv::Mat(mono_convert, rightROI);
+		}
 
-		// Crop images. Make a copy for left and right.
-                cv::Mat leftImage = cv::Mat(mono_convert, leftROI);
-                cv::Mat rightImage = cv::Mat(mono_convert, rightROI);
-                
+		else {
+		
+		    // Crop images. Make a copy for left and right.
+                    cv::Mat leftImage = cv::Mat(cvImg->image, leftROI);
+                    cv::Mat rightImage = cv::Mat(cvImg->image, rightROI);
+		}
                 // CV image bridge
                 cv_bridge::CvImage cvImage;
 		
-                cvImage.encoding = "mono8";
+                cvImage.encoding = image_enc;
                 cvImage.header.frame_id = msg->header.frame_id;
                 cvImage.header.stamp = msg->header.stamp;
                 cvImage.image = leftImage;
