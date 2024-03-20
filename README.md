@@ -27,6 +27,7 @@ Parameters
 
 - left_cam_calibration_file -- URL to left camera calibration yaml file
 - right_cam_calibration_file -- URL to right camera calibration yaml file
+- image_encoding -- defaults to mono8, but can acept bgr8
 
 
 
