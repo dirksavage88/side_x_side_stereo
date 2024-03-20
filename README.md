@@ -39,7 +39,7 @@ Disparity Map shown using isaac ros image pipeline->isaac_ros_stereo_image_proc 
 **Example command for stereo splitter:**
 ----------
 
-- ros2 run side_x_side_stereo side_x_side_stereo_node --ros-args -p output_width:=640 -p output_height:=240 -p input_image_topic:=/image_mono -p left_output_image_topic:=/left/image_raw -p right_output_image_topic:=/right/image_raw -p left_camera_info_topic:=/left/camera_info -p right_camera_info_topic:=/right/camera_info
+- ros2 run side_x_side_stereo side_x_side_stereo_node --ros-args -p input_image_topic:=/image_mono -p image_encoding:=mono8 -p left_output_image_topic:=/left/image_raw -p right_output_image_topic:=/right/image_raw -p left_camera_info_topic:=/left/camera_info -p right_camera_info_topic:=/right/camera_info
 
 **Example command to set up a disparity node:**
 ----------
