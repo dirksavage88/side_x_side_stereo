@@ -73,7 +73,7 @@ class SplitImagePair : public rclcpp::Node
             right_cam_frame = this->get_parameter("right_frame_id").as_string();
             left_cam_calibration_file = this->get_parameter("left_cam_calibration_file").as_string();
             right_cam_calibration_file = this->get_parameter("right_cam_calibration_file").as_string();
-            std::string image_enc = this->get_parameter("image_encoding").as_string();
+            image_enc = this->get_parameter("image_encoding").as_string();
             
 	    // Image publisher image transport instance 
             rclcpp::NodeOptions options;
@@ -103,19 +103,35 @@ class SplitImagePair : public rclcpp::Node
             pub_cam_info_r_ = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 1);
         }
 
+	void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
+        ~SplitImagePair(){}
 
-
+    private:
+        //Publisher shared ptrs (formerly node handles)
+        rclcpp::TimerBase::SharedPtr timer_ptr_;
+        image_transport::Publisher pub_l_;
+        image_transport::Publisher pub_r_;
+        std::string left_cam_calibration_file;
+        std::string right_cam_calibration_file;
+        std::string left_cam_frame;
+        std::string right_cam_frame;
+	std::string image_enc;
+	rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_;
+        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_;
+        sensor_msgs::msg::CameraInfo info_right_;
+        sensor_msgs::msg::CameraInfo info_left_;
+};
 
         // Image capture callback.
-        void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg)
-        {
+void SplitImagePair::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg)
+{
 
             // Created shared ptr to image 
             auto img = std::make_shared<sensor_msgs::msg::Image>(); 
             cv_bridge::CvImageConstPtr cvImg; 
             
             // Get double camera image.
-	    if (image_enc == "mono8") {
+	    if(image_enc == "mono8") {
 	    
             	cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 	    }
@@ -125,10 +141,11 @@ class SplitImagePair : public rclcpp::Node
             	cvImg = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	    }
 
-
             // If there are any subscribers to either output topic then publish images
             // on them.
-            if (pub_l_.getNumSubscribers() > 0u ||
+	    cv::Mat leftImage;
+	    cv::Mat rightImage;
+            if(pub_l_.getNumSubscribers() > 0u ||
                 pub_r_.getNumSubscribers() > 0u)
             {
 
@@ -139,22 +156,19 @@ class SplitImagePair : public rclcpp::Node
                 leftROI.height = rightROI.height = cvImg->image.rows;
                 leftROI.x = 0;
                 rightROI.x = cvImg->image.cols / 2;
-               
 	        if (image_enc == "bgr8") {	
 		    // Convert to mono
 		    cv::Mat mono_convert;
 		    cv::cvtColor(cvImg->image, mono_convert, CV_BGR2GRAY);
 		
 		    // Crop images. Make a copy for left and right.
-                    cv::Mat leftImage = cv::Mat(mono_convert, leftROI);
-                    cv::Mat rightImage = cv::Mat(mono_convert, rightROI);
-		}
-
-		else {
+                    leftImage = cv::Mat(mono_convert, leftROI);
+                    rightImage = cv::Mat(mono_convert, rightROI);
+		} else {
 		
 		    // Crop images. Make a copy for left and right.
-                    cv::Mat leftImage = cv::Mat(cvImg->image, leftROI);
-                    cv::Mat rightImage = cv::Mat(cvImg->image, rightROI);
+                    leftImage = cv::Mat(cvImg->image, leftROI);
+                    rightImage = cv::Mat(cvImg->image, rightROI);
 		}
                 // CV image bridge
                 cv_bridge::CvImage cvImage;
@@ -177,23 +191,7 @@ class SplitImagePair : public rclcpp::Node
                 pub_cam_info_r_->publish(info_right_);
 
             }
-        }
-
-        ~SplitImagePair(){}
-    private:
-        //Publisher shared ptrs (formerly node handles)
-        rclcpp::TimerBase::SharedPtr timer_ptr_;
-        image_transport::Publisher pub_l_;
-        image_transport::Publisher pub_r_;
-        std::string left_cam_calibration_file;
-        std::string right_cam_calibration_file;
-        std::string left_cam_frame;
-        std::string right_cam_frame;
-        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_l_;//_ = create_publisher<sensor_msgs::msg::CameraInfo>("left/camera_info", 1);
-        rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr pub_cam_info_r_;// = create_publisher<sensor_msgs::msg::CameraInfo>("right/camera_info", 1);
-        sensor_msgs::msg::CameraInfo info_right_;// = std::make_shared<sensor_msgs::msg::CameraInfo>();
-        sensor_msgs::msg::CameraInfo info_left_;// = std::make_shared<sensor_msgs::msg::CameraInfo>();
-};
+}
 
 int main(int argc, char** argv)
 {
