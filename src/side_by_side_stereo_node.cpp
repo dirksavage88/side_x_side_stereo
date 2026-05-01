@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     
     auto rawimage = std::make_shared<rclcpp::Node>("image_sub_cb");
     image_transport::ImageTransport it(rawimage);
-    image_transport::Subscriber sub = it.subscribe(inputImageTopic.c_str(), 1, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
+    image_transport::Subscriber sub = it.subscribe(inputImageTopic.c_str(), 10, std::bind(&SplitImagePair::imageCallback, splitim_ptr, std::placeholders::_1));
     
     rclcpp::spin(rawimage);
     rclcpp::shutdown();
